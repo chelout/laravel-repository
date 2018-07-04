@@ -1,0 +1,35 @@
+{
+    "name": "chelout/laravel-repository",
+    "description": "Repository implementation for Laravel",
+    "homepage": "https://github.com/chelout/laravel-repository",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "repository"
+    ],
+    "authors": [
+        {
+            "name": "chelout",
+            "email": "chelout@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.1.3",
+        "illuminate/config": "~5.6",
+        "illuminate/database": "~5.6",
+        "illuminate/pagination": "~5.6",
+        "illuminate/support": "~5.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Chelout\\Repository\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Chelout\\Repository\\RepositoryServiceProvider"
+            ]
+        }
+    }
+}
