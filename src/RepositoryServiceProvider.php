@@ -1,6 +1,6 @@
 <?php
 
-namespace Chelout\Repository\Providers;
+namespace Chelout\Repository;
 
 use Illuminate\Support\ServiceProvider;
 
