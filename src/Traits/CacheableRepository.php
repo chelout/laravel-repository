@@ -2,8 +2,8 @@
 
 namespace Chelout\Repository\Traits;
 
-use App\Repositories\Helpers\CacheKeys;
 use Chelout\Repository\Contracts\ScopeInterface;
+use Chelout\Repository\Eloquent\BaseRepository;
 use Exception;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use ReflectionObject;
@@ -14,6 +14,11 @@ trait CacheableRepository
      * @var CacheRepository
      */
     protected $cacheRepository = null;
+
+    /**
+     * @var \Chelout\Repository\Eloquent\BaseRepository
+     */
+    protected $repository;
 
     /**
      * Set Cache Repository.
@@ -58,7 +63,7 @@ trait CacheableRepository
     {
         return [
             'repositories',
-            $this->model->getTable(),
+            $this->repository->getModel()->getTable(),
         ];
     }
 
@@ -124,13 +129,13 @@ trait CacheableRepository
      *
      * @return string
      */
-    public function getCacheKey($args = null)
+    public function getCacheKey($method, $parameters = null)
     {
         return sprintf(
             '%s@%s-%s',
             class_basename(get_called_class()),
-            debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'],
-            md5(serialize($args) . serialize($this->getScopes()))
+            $method,
+            md5(serialize($parameters) . serialize($this->repository->getScopes()))
         );
     }
 
@@ -145,249 +150,28 @@ trait CacheableRepository
     }
 
     /**
-     * Find data by id.
+     * Handle dynamic method calls into the method.
      *
-     * @param       $id
-     * @param array $columns
-     *
-     * @return mixed
-     */
-    public function find($id, $columns = ['*'])
-    {
-        if (!$this->allowedCache('find') || $this->isSkippedCache()) {
-            return parent::find($id, $columns);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($id, $columns) {
-                return parent::find($id, $columns);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-    /**
-     * Find data by field and value.
-     *
-     * @param       $field
-     * @param       $value
-     * @param array $columns
+     * @param string $method
+     * @param array  $parameters
      *
      * @return mixed
      */
-    public function findByField($field, $value = null, $columns = ['*'])
-    {
-        if (!$this->allowedCache('findByField') || $this->isSkippedCache()) {
-            return parent::findByField($field, $value, $columns);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($field, $value, $columns) {
-                return parent::findByField($field, $value, $columns);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-    /**
-     * Find data by multiple fields.
-     *
-     * @param array $where
-     * @param array $columns
-     *
-     * @return mixed
-     */
-    public function findWhere(array $where, $columns = ['*'])
-    {
-        if (!$this->allowedCache('findWhere') || $this->isSkippedCache()) {
-            return parent::findWhere($where, $columns);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($where, $columns) {
-                return parent::findWhere($where, $columns);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-    /**
-     * Find data by multiple values in one field.
-     *
-     * @param       $field
-     * @param array $values
-     * @param array $columns
-     *
-     * @return mixed
-     */
-    public function findWhereIn($field, array $values, $columns = ['*'])
-    {
-        if (! $this->allowedCache('findWhere') || $this->isSkippedCache()) {
-            return parent::findWhereIn($field, $values, $columns);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($field, $values, $columns) {
-                return parent::findWhereIn($field, $values, $columns);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-    /**
-     * Find data by excluding multiple values in one field.
-     *
-     * @param       $field
-     * @param array $values
-     * @param array $columns
-     *
-     * @return mixed
-     */
-    public function findWhereNotIn($field, array $values, $columns = ['*'])
-    {
-        if (!$this->allowedCache('findWhere') || $this->isSkippedCache()) {
-            return parent::findWhereNotIn($field, $values, $columns);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($field, $values, $columns) {
-                return parent::findWhereNotIn($field, $values, $columns);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-    /**
-     * Retrieve all data of repository.
-     *
-     * @param array $columns
-     *
-     * @return mixed
-     */
-    public function all($columns = ['*'])
-    {
-        if (! $this->allowedCache('all') || $this->isSkippedCache()) {
-            return parent::all($columns);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($columns) {
-                return parent::all($columns);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-    /**
-     * Retrieve data array for populate field select.
-     *
-     * @param string      $column
-     * @param string|null $key
-     *
-     * @return \Illuminate\Support\Collection|array
-     */
-    public function pluck($column, $key = null)
+    public function __call($method, $parameters)
     {
         if (!$this->allowedCache('all') || $this->isSkippedCache()) {
-            return parent::pluck($columns, $key);
+            $this->repository->$method(...$parameters);
         }
 
-        $key = $this->getCacheKey(func_get_args());
+        $key = $this->getCacheKey($method, $parameters);
         $minutes = $this->getCacheMinutes();
         $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($columns, $key) {
-                return parent::pluck($columns, $key);
+            ->remember($key, $minutes, function () use ($method, $parameters) {
+                return $this->repository->$method(...$parameters);
             });
 
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-    /**
-     * Retrieve all data of repository, paginated.
-     *
-     * @param null   $limit
-     * @param array  $columns
-     * @param string $method
-     *
-     * @return mixed
-     */
-    public function paginate($limit = null, $columns = ['*'], $method = 'paginate')
-    {
-        if (! $this->allowedCache('paginate') || $this->isSkippedCache()) {
-            return parent::paginate($limit, $columns, $method);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($limit, $columns, $method) {
-                return parent::paginate($limit, $columns, $method);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
-
-        return $value;
-    }
-
-
-
-    /**
-     * Find data by Scope.
-     *
-     * @param ScopeInterface $scope
-     *
-     * @return mixed
-     */
-    public function getByScope(ScopeInterface $scope)
-    {
-        if (! $this->allowedCache('getByScope') || $this->isSkippedCache()) {
-            return parent::getByScope($scope);
-        }
-
-        $key = $this->getCacheKey(func_get_args());
-        $minutes = $this->getCacheMinutes();
-        $value = $this->getCacheRepository()
-            ->remember($key, $minutes, function () use ($scope) {
-                return parent::getByScope($scope);
-            });
-
-        $this->resetModel();
-        $this->resetQueryScope();
+        $this->repository->resetModel();
+        $this->repository->resetQueryScope();
 
         return $value;
     }

@@ -18,8 +18,13 @@ use Illuminate\Support\Collection;
 /**
  * Class AbstractRepository.
  */
-abstract class AbstractRepository implements RepositoryInterface, RepositoryQueryScopeInterface, RepositoryScopeInterface
+class BaseRepository implements RepositoryInterface, RepositoryQueryScopeInterface, RepositoryScopeInterface
 {
+    /**
+     * @var string
+     */
+    protected $fqcn;
+    
     /**
      * @var Model
      */
@@ -42,6 +47,9 @@ abstract class AbstractRepository implements RepositoryInterface, RepositoryQuer
      */
     protected $queryScope = null;
 
+    /**
+     * @param string $fqcn
+     */
     public function __construct()
     {
         $this->resetScopes();
@@ -63,23 +71,20 @@ abstract class AbstractRepository implements RepositoryInterface, RepositoryQuer
     }
 
     /**
-     * Specify Model class name.
-     *
-     * @return string
-     */
-    abstract public function model();
-
-    /**
-     * @throws RepositoryException
-     *
      * @return Model
      */
     public function makeModel()
     {
-        $this->model = app(
-            $this->model()
-        );
+        $this->model = app($this->fqcn);
 
+        return $this->model;
+    }
+
+    /**
+     * @return Model
+     */
+    public function getModel()
+    {
         return $this->model;
     }
 

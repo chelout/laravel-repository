@@ -40,7 +40,7 @@ interface CacheableInterface
      *
      * @return string
      */
-    public function getCacheKey($args = null);
+    public function getCacheKey($method, $parameters = null);
 
     /**
      * Get cache minutes.
